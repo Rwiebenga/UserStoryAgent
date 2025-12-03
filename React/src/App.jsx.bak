@@ -1,11 +1,7 @@
 import { useState, useEffect } from "react";
-import Some from './components/Some';
 import Navbar from "./components/Navbar";
-import Some from './components/Some';
 import EmbassyInfo from "./components/EmbassyInfo";
-import Some from './components/Some';
 import "./App.css";
-import Some from './components/Some';
 
 function App() {
   const [embassies, setEmbassies] = useState([]);
@@ -103,6 +99,3 @@ function App() {
 }
 
 export default App;
-
-// TODO: Integrate Some component based on user story US-5
-// Example: <Some />
