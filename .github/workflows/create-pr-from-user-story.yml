@@ -181,11 +181,11 @@ jobs:
           EOFPR
           )
 
-          # Create the pull request (or update if it already exists)
+          # Create the pull request (or skip if it already exists)
           if gh pr view ${{ steps.extract.outputs.branch_name }} &>/dev/null; then
-            echo "PR already exists for this branch, updating description"
-            PR_NUMBER=$(gh pr view ${{ steps.extract.outputs.branch_name }} --json number -q .number)
-            gh pr edit $PR_NUMBER --body "$PR_BODY"
+            echo "PR already exists for this branch (#$(gh pr view ${{ steps.extract.outputs.branch_name }} --json number -q .number))"
+            echo "The user story file has been updated in the branch. The PR description will remain as-is."
+            echo "To update the PR description, close the existing PR and trigger this workflow again."
           else
             echo "Creating new PR"
             gh pr create \
