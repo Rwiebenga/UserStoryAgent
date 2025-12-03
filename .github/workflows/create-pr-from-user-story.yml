@@ -90,14 +90,25 @@ jobs:
           git config user.name "Azure DevOps Bot"
           git config user.email "azuredevops-bot@users.noreply.github.com"
 
-      - name: Create feature branch
+      - name: Create or update feature branch
         env:
           DESCRIPTION: ${{ steps.multiline.outputs.description }}
           CRITERIA: ${{ steps.multiline.outputs.acceptance_criteria }}
         run: |
-          git checkout -b ${{ steps.extract.outputs.branch_name }}
+          BRANCH_NAME="${{ steps.extract.outputs.branch_name }}"
+          
+          # Check if branch exists remotely
+          if git ls-remote --exit-code --heads origin "$BRANCH_NAME"; then
+            echo "Branch $BRANCH_NAME already exists, checking it out and updating"
+            git fetch origin "$BRANCH_NAME"
+            git checkout "$BRANCH_NAME"
+            git pull origin "$BRANCH_NAME"
+          else
+            echo "Creating new branch $BRANCH_NAME"
+            git checkout -b "$BRANCH_NAME"
+          fi
 
-          # Create a placeholder file for the feature
+          # Create/update the user story file
           mkdir -p .azure-devops
           cat > .azure-devops/US-${{ steps.extract.outputs.work_item_id }}.md << 'EOF'
           # User Story: ${{ steps.extract.outputs.title }}
@@ -121,8 +132,14 @@ jobs:
           EOF
 
           git add .azure-devops/US-${{ steps.extract.outputs.work_item_id }}.md
-          git commit -m "feat: Initialize user story US-${{ steps.extract.outputs.work_item_id }}"
-          git push origin ${{ steps.extract.outputs.branch_name }}
+          
+          # Only commit if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "feat: Update user story US-${{ steps.extract.outputs.work_item_id }}"
+            git push origin "$BRANCH_NAME"
+          fi
 
       - name: Create Pull Request
         env:
@@ -160,14 +177,21 @@ jobs:
           EOFPR
           )
 
-          # Create the pull request
-          gh pr create \
-            --title "${{ steps.extract.outputs.pr_title }}" \
-            --body "$PR_BODY" \
-            --base main \
-            --head ${{ steps.extract.outputs.branch_name }} \
-            --label "user-story,azure-devops" \
-            --assignee "${{ steps.extract.outputs.assigned_to }}" || true
+          # Create the pull request (or update if it already exists)
+          if gh pr view ${{ steps.extract.outputs.branch_name }} &>/dev/null; then
+            echo "PR already exists for this branch, updating description"
+            PR_NUMBER=$(gh pr view ${{ steps.extract.outputs.branch_name }} --json number -q .number)
+            gh pr edit $PR_NUMBER --body "$PR_BODY"
+          else
+            echo "Creating new PR"
+            gh pr create \
+              --title "${{ steps.extract.outputs.pr_title }}" \
+              --body "$PR_BODY" \
+              --base main \
+              --head ${{ steps.extract.outputs.branch_name }} \
+              --label "user-story,azure-devops" \
+              --assignee "${{ steps.extract.outputs.assigned_to }}"
+          fi
 
       - name: Comment on Pull Request
         env:
