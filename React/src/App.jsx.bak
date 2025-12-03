@@ -1,11 +1,7 @@
 import { useState, useEffect } from "react";
-import Delete from './components/Delete';
 import Navbar from "./components/Navbar";
-import Delete from './components/Delete';
 import EmbassyInfo from "./components/EmbassyInfo";
-import Delete from './components/Delete';
 import "./App.css";
-import Delete from './components/Delete';
 
 function App() {
   const [embassies, setEmbassies] = useState([]);
@@ -103,6 +99,3 @@ function App() {
 }
 
 export default App;
-
-// TODO: Integrate Delete component based on user story US-374407
-// Example: <Delete />
