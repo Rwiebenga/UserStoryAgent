@@ -354,87 +354,6 @@ jobs:
             echo "// Example: <$COMPONENT_NAME />" >> React/src/App.jsx
           fi
 
-      - name: Generate Implementation Guide
-        run: |
-          cat > "IMPLEMENTATION_GUIDE_US-${{ steps.user_story.outputs.us_id }}.md" << 'EOF'
-          # Implementation Guide for US-${{ steps.user_story.outputs.us_id }}
-
-          ## User Story
-          **Title:** ${{ steps.user_story.outputs.title }}
-
-          **Description:**
-          ${{ steps.user_story.outputs.description }}
-
-          **Acceptance Criteria:**
-          ${{ steps.user_story.outputs.criteria }}
-
-          ---
-
-          ## Generated Files
-
-          The AI agent has generated the following starter files:
-
-          ### Frontend (React)
-          - `React/src/components/[ComponentName]/[ComponentName].jsx` - Main component
-          - `React/src/components/[ComponentName]/[ComponentName].css` - Component styles
-          - `React/src/components/[ComponentName]/index.js` - Export file
-
-          ### Backend (.NET)
-          - `FindMyEmbassy/Controllers/[Feature]Controller.cs` - API controller
-          - `FindMyEmbassy/Models/[Feature]Model.cs` - Data model
-
-          ---
-
-          ## Next Steps
-
-          1. **Review Generated Code**
-             - Check the generated files in your IDE
-             - Verify they align with the acceptance criteria
-
-          2. **Implement Business Logic**
-             - Replace TODO comments with actual implementation
-             - Add proper error handling
-             - Implement data validation
-
-          3. **Connect Frontend to Backend**
-             - Update API endpoints in React components
-             - Test data flow between frontend and backend
-
-          4. **Testing**
-             - Write unit tests for new functionality
-             - Test all acceptance criteria
-             - Manual testing in the browser
-
-          5. **Code Review**
-             - Request review from team members
-             - Address any feedback
-             - Ensure code follows project standards
-
-          ---
-
-          ## Helpful Commands
-
-          ```bash
-          # Run React app
-          cd React
-          npm install
-          npm start
-
-          # Run .NET backend
-          cd FindMyEmbassy
-          dotnet restore
-          dotnet run
-          ```
-
-          ---
-
-          ## Questions or Issues?
-
-          - Comment on this PR for help
-          - Tag @Rwiebenga for questions
-          - Check the project README for setup instructions
-          EOF
-
       - name: Commit Generated Code
         run: |
           git config user.name "AI Code Generator Bot"
@@ -447,7 +366,6 @@ jobs:
 
             - Generated React component with basic structure
             - Created .NET controller and model
-            - Added implementation guide
             - All code includes TODOs based on acceptance criteria
             
             User Story: ${{ steps.user_story.outputs.title }}
@@ -472,14 +390,12 @@ jobs:
             - React component with basic structure
             - .NET controller and model
             - CSS styles
-            - Implementation guide
 
             ### 📝 Next Steps:
             1. Pull the latest changes from this branch
             2. Review the generated code in your IDE
-            3. Follow the implementation guide (see \`IMPLEMENTATION_GUIDE_US-${{ steps.user_story.outputs.us_id }}.md\`)
-            4. Replace TODO comments with actual business logic
-            5. Test against acceptance criteria
+            3. Replace TODO comments with actual business logic
+            4. Test against acceptance criteria
 
             ### 💡 Tips:
             - Use GitHub Copilot in your IDE for intelligent code completion
