@@ -7,27 +7,27 @@ on:
   workflow_dispatch:
     inputs:
       workItemId:
-        description: 'Work Item ID'
+        description: "Work Item ID"
         required: true
         type: string
       title:
-        description: 'User Story Title'
+        description: "User Story Title"
         required: true
         type: string
       description:
-        description: 'Description'
+        description: "Description"
         required: false
         type: string
       acceptanceCriteria:
-        description: 'Acceptance Criteria'
+        description: "Acceptance Criteria"
         required: false
         type: string
       assignedTo:
-        description: 'Assigned To'
+        description: "Assigned To"
         required: false
         type: string
       url:
-        description: 'Azure DevOps URL'
+        description: "Azure DevOps URL"
         required: false
         type: string
 
@@ -60,7 +60,7 @@ jobs:
             ASSIGNED_TO="${{ inputs.assignedTo }}"
             URL="${{ inputs.url }}"
           fi
-          
+
           echo "User Story ID: $WORK_ITEM_ID"
           echo "Title: $TITLE"
           echo "Description: $DESCRIPTION"

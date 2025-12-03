@@ -1,0 +1,50 @@
+name: Azure DevOps Webhook Receiver
+
+on:
+  # This workflow is triggered by incoming webhooks
+  workflow_dispatch:
+    inputs:
+      payload:
+        description: "Webhook payload from Azure DevOps"
+        required: true
+        type: string
+
+jobs:
+  process-webhook:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Parse Azure DevOps payload
+        id: parse
+        run: |
+          echo "Received payload"
+          echo "${{ inputs.payload }}" | jq '.'
+
+      - name: Trigger PR creation workflow
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Parse the incoming Azure DevOps webhook payload
+            const payload = JSON.parse('${{ inputs.payload }}');
+
+            // Extract work item details
+            const workItem = payload.resource || {};
+            const workItemId = workItem.id;
+            const fields = workItem.fields || {};
+
+            // Trigger the repository_dispatch event
+            await github.rest.repos.createDispatchEvent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              event_type: 'azure-devops-user-story-created',
+              client_payload: {
+                workItemId: workItemId,
+                title: fields['System.Title'] || 'Untitled User Story',
+                description: fields['System.Description'] || '',
+                acceptanceCriteria: fields['Microsoft.VSTS.Common.AcceptanceCriteria'] || '',
+                assignedTo: fields['System.AssignedTo'] || '',
+                url: workItem._links?.html?.href || ''
+              }
+            });
+
+            console.log('Successfully triggered repository_dispatch event');
