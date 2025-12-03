@@ -25,16 +25,181 @@ This guide explains how to set up automatic pull request creation in GitHub when
 
 ### Step 1: Create GitHub Personal Access Token
 
-1. Go to GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
-2. Click "Generate new token (classic)"
-3. Set the following:
-   - **Note:** "Azure DevOps PR Creator"
-   - **Expiration:** Choose appropriate duration
-   - **Scopes:** Check `repo` (Full control of private repositories)
-4. Click "Generate token"
-5. **IMPORTANT:** Copy the token immediately (you won't see it again)
+#### Detailed Instructions:
 
-### Step 2: Configure Azure DevOps Service Hook
+**Option A: Using Fine-grained Personal Access Tokens (Recommended - New Method)**
+
+1. **Navigate to GitHub Settings**
+
+   - Go to [github.com](https://github.com) and make sure you're logged in
+   - Click your profile picture in the top-right corner
+   - Click **Settings** from the dropdown menu
+
+2. **Access Developer Settings**
+
+   - Scroll all the way down the left sidebar
+   - Click **Developer settings** (second to last option, above Copilot)
+
+3. **Go to Personal Access Tokens**
+
+   - In the left sidebar, expand **Personal access tokens**
+   - Click **Fine-grained tokens** (this is the newer, more secure option)
+
+4. **Generate New Token**
+
+   - Click the **Generate new token** button (green button in top-right)
+   - You may be prompted to confirm your password - enter it
+
+5. **Configure Token Settings**
+
+   - **Token name:** `Azure DevOps PR Automation`
+   - **Expiration:** Select your preference (30, 60, 90 days, or Custom)
+     - Recommended: 90 days (you'll need to regenerate it after expiration)
+   - **Description:** `Allows Azure DevOps to create PRs automatically`
+   - **Resource owner:** Select `RensWiebenga` (the repository owner)
+
+6. **Set Repository Access**
+
+   - Under **Repository access**, select **Only select repositories**
+   - Click the **Select repositories** dropdown
+   - Search for and select `FindMyEmbassyReact`
+
+7. **Configure Permissions**
+
+   - Scroll down to **Permissions** → **Repository permissions**
+   - Find and expand **Contents**
+     - Set to: **Read and write** (allows creating branches and files)
+   - Find and expand **Pull requests**
+     - Set to: **Read and write** (allows creating and managing PRs)
+   - Find and expand **Metadata**
+     - This will be automatically set to **Read-only** (required)
+   - Find and expand **Workflows** (optional, but recommended)
+     - Set to: **Read and write** (allows triggering GitHub Actions)
+
+8. **Generate the Token**
+   - Scroll to the bottom and click **Generate token** (green button)
+   - **CRITICAL:** Copy the token immediately - it looks like `github_pat_11A...`
+   - Store it securely (you won't be able to see it again!)
+   - Consider saving it temporarily in a secure note or password manager
+
+---
+
+**Option B: Using Classic Personal Access Tokens (Legacy Method)**
+
+If you prefer the older method or can't find fine-grained tokens:
+
+1. **Navigate to GitHub Settings**
+
+   - Go to [github.com](https://github.com)
+   - Click your profile picture → **Settings**
+
+2. **Access Developer Settings**
+
+   - Scroll down and click **Developer settings**
+
+3. **Go to Personal Access Tokens**
+
+   - Click **Personal access tokens**
+   - Click **Tokens (classic)**
+
+4. **Generate New Token**
+
+   - Click **Generate new token (classic)**
+   - You may need to enter your password
+
+5. **Configure Token**
+
+   - **Note:** `Azure DevOps PR Creator`
+   - **Expiration:** Select duration (30, 60, 90 days, or Custom)
+   - **Select scopes:** Check the **`repo`** checkbox (this gives full control of private repositories)
+     - This will automatically select all sub-scopes under `repo`
+
+6. **Generate and Copy**
+   - Scroll down and click **Generate token**
+   - **IMPORTANT:** Copy the token immediately (looks like `ghp_xxxxxxxxxxxx`)
+   - Save it securely!
+
+---
+
+#### Troubleshooting Token Creation:
+
+**Can't find Developer Settings?**
+
+- Make sure you're on github.com (not gist.github.com or docs.github.com)
+- Try this direct link: [https://github.com/settings/tokens](https://github.com/settings/tokens)
+
+**Don't see Personal Access Tokens option?**
+
+- Ensure your GitHub account has the necessary permissions
+- Your organization may have restrictions - contact your GitHub admin
+
+**Token expires too quickly?**
+
+- GitHub recommends shorter expiration for security
+- You can set up a calendar reminder to regenerate the token before it expires
+- Consider using GitHub Apps for long-term automation (more advanced)
+
+**Lost your token?**
+
+- You cannot recover a lost token
+- Simply generate a new one and update the Azure DevOps Service Hook configuration
+
+### Step 2: Deploy Azure Function Webhook Proxy
+
+Since Azure DevOps Service Hooks doesn't allow custom JSON payloads for the GitHub `/dispatches` endpoint, we need to use a simple Azure Function as a proxy that converts Azure DevOps webhooks into GitHub repository_dispatch events.
+
+#### Option A: Quick Deploy to Azure (Recommended)
+
+1. **Create an Azure Function App:**
+
+   - Go to [Azure Portal](https://portal.azure.com)
+   - Click **Create a resource** → **Function App**
+   - Fill in the details:
+     - **Function App name:** `azuredevops-github-proxy` (must be globally unique)
+     - **Runtime stack:** Node.js
+     - **Version:** 18 LTS or higher
+     - **Region:** Choose closest to you
+   - Click **Review + create** → **Create**
+
+2. **Configure Function App Settings:**
+
+   - After deployment, go to your Function App
+   - In the left menu, click **Configuration**
+   - Under **Application settings**, click **New application setting**
+   - Add these two settings:
+     - Name: `GITHUB_TOKEN`, Value: Your GitHub token from Step 1
+     - Name: `GITHUB_REPO`, Value: `Rwiebenga/UserStoryAgent`
+   - Click **Save**
+
+3. **Deploy the Function Code:**
+   - In your Function App, click **Functions** in the left menu
+   - Click **Create** → **HTTP trigger**
+   - Name: `AzureDevOpsWebhook`
+   - Authorization level: **Function**
+   - Click **Create**
+4. **Add the Function Code:**
+
+   - Click on your new function
+   - Click **Code + Test** in the left menu
+   - Replace the content of `index.js` with the code from `.azure-function/index.js` in this repository
+   - Click **Save**
+
+5. **Get the Function URL:**
+   - Click **Get Function URL** button
+   - Copy the URL (it will look like: `https://azuredevops-github-proxy.azurewebsites.net/api/AzureDevOpsWebhook?code=...`)
+   - **Save this URL** - you'll need it for Step 3
+
+#### Option B: Use GitHub Actions Workflow Dispatch (Simpler Alternative)
+
+If you don't want to set up an Azure Function, you can manually trigger the workflow:
+
+1. The workflow has been updated to support both `repository_dispatch` and `workflow_dispatch`
+2. You can manually trigger it from GitHub Actions tab
+3. For full automation, Option A (Azure Function) is still recommended
+
+---
+
+### Step 3: Configure Azure DevOps Service Hook
 
 1. Go to your Azure DevOps project
 2. Navigate to **Project Settings** (bottom left)
@@ -52,39 +217,27 @@ This guide explains how to set up automatic pull request creation in GitHub when
 
 #### Configure Action:
 
-- **URL:** `https://api.github.com/repos/RensWiebenga/FindMyEmbassyReact/dispatches`
-- **HTTP Headers:**
+- **URL:** Paste your Azure Function URL from Step 2 (Option A)
 
-  ```
-  Accept: application/vnd.github+json
-  Authorization: Bearer YOUR_GITHUB_TOKEN_HERE
-  X-GitHub-Api-Version: 2022-11-28
-  Content-Type: application/json
-  ```
+  - Example: `https://azuredevops-github-proxy.azurewebsites.net/api/AzureDevOpsWebhook?code=YOUR_FUNCTION_KEY`
 
-  Replace `YOUR_GITHUB_TOKEN_HERE` with the token from Step 1
+- **HTTP Headers:** Leave this field **EMPTY**
 
-- **HTTP Body (JSON):**
+- **☑ Accept untrusted SSL certificates:** Leave unchecked
 
-  ```json
-  {
-    "event_type": "azure-devops-user-story-created",
-    "client_payload": {
-      "workItemId": "{{workitem.id}}",
-      "title": "{{workitem.fields['System.Title']}}",
-      "description": "{{workitem.fields['System.Description']}}",
-      "acceptanceCriteria": "{{workitem.fields['Microsoft.VSTS.Common.AcceptanceCriteria']}}",
-      "assignedTo": "{{workitem.fields['System.AssignedTo']}}",
-      "url": "{{workitem.url}}"
-    }
-  }
-  ```
+- **Basic authentication username:** Leave empty (authentication is handled by the function code parameter)
+
+- **Basic authentication password:** Leave empty
 
 - **Resource details to send:** `All`
 - **Messages to send:** `All`
-- Click **Finish**
+- **Detailed messages to send:** `All`
+- Click **Test** to verify the connection
+- If successful, click **Finish**
 
-### Step 3: Test the Integration
+---
+
+### Step 4: Test the Integration
 
 1. In Azure DevOps, create a new User Story:
 
@@ -118,14 +271,22 @@ This guide explains how to set up automatic pull request creation in GitHub when
 ### GitHub Actions not running
 
 1. Check GitHub → Actions tab for workflow runs
-2. Ensure the workflow file is on the `Develop` branch
+2. Ensure the workflow file is on the `main` branch (or your default branch)
 3. Verify GitHub token has correct permissions
+4. Check Azure Function logs if using Option A in Step 2
+
+### Azure Function errors (if using Option A)
+
+1. Go to Azure Portal → Your Function App → Monitor
+2. Check the **Logs** tab for errors
+3. Verify the GITHUB_TOKEN environment variable is set correctly
+4. Ensure the function code was deployed correctly
 
 ### Authentication errors
 
 - Verify the GitHub token hasn't expired
-- Ensure the token has `repo` scope
-- Check the Authorization header format: `Bearer YOUR_TOKEN`
+- Ensure the token has proper permissions (Contents: Read/Write, Pull Requests: Read/Write)
+- Check that the token is configured correctly in Azure Function settings
 
 ### Branch creation fails
 

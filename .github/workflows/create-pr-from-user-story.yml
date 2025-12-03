@@ -174,17 +174,17 @@ jobs:
           4. Request review when ready
 
           Once approved and merged, please update the Azure DevOps work item status."
-          
+
       - name: Trigger AI Code Generation
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           # Get the PR number
           PR_NUMBER=$(gh pr view ${{ steps.extract.outputs.branch_name }} --json number -q .number)
-          
+
           # Wait a moment for PR to be fully created
           sleep 5
-          
+
           # Use repository_dispatch to trigger the AI workflow
           curl -X POST \
             -H "Accept: application/vnd.github+json" \

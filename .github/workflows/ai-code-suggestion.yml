@@ -11,7 +11,7 @@ jobs:
     # Only run on PRs created by the automation (labeled with azure-devops)
     if: contains(github.event.pull_request.labels.*.name, 'azure-devops')
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: write
       pull-requests: write
@@ -28,7 +28,7 @@ jobs:
         run: |
           # Find the user story markdown file
           US_FILE=$(find .azure-devops -name "US-*.md" | head -n 1)
-          
+
           if [ -f "$US_FILE" ]; then
             echo "Found user story: $US_FILE"
             CONTENT=$(cat "$US_FILE")
@@ -47,13 +47,13 @@ jobs:
         run: |
           # Get list of relevant files based on the project structure
           echo "Analyzing project structure..."
-          
+
           # For React project
           if [ -d "React/src" ]; then
             echo "project_type=react" >> $GITHUB_OUTPUT
             echo "source_dir=React/src" >> $GITHUB_OUTPUT
           fi
-          
+
           # For .NET project
           if [ -d "FindMyEmbassy" ]; then
             echo "project_type=dotnet" >> $GITHUB_OUTPUT
@@ -65,57 +65,57 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            
+
             // Read the user story
             const userStoryFiles = fs.readdirSync('.azure-devops').filter(f => f.startsWith('US-'));
             if (userStoryFiles.length === 0) {
               console.log('No user story found');
               return;
             }
-            
+
             const userStory = fs.readFileSync(`.azure-devops/${userStoryFiles[0]}`, 'utf8');
-            
+
             // Create a detailed prompt for code suggestions
             const analysisComment = `## 🤖 AI Code Analysis
-            
+
             I've analyzed this user story and here are my suggestions for implementation:
-            
+
             ### User Story Summary
             ${userStory}
-            
+
             ### Recommended Implementation Steps
-            
+
             Based on the user story, I recommend the following approach:
-            
+
             1. **Identify the affected components**: 
                - Determine which files need to be modified
                - Consider both React and .NET parts if applicable
-            
+
             2. **Proposed Changes**:
                - Create/modify necessary components
                - Update models/interfaces
                - Add required API endpoints (if backend changes needed)
                - Update UI components (if frontend changes needed)
-            
+
             3. **Testing Strategy**:
                - Unit tests for new functionality
                - Integration tests for API changes
                - UI tests for component changes
-            
+
             ### Next Steps for the Developer
-            
+
             1. Review the acceptance criteria in the user story
             2. Implement the changes following the suggestions above
             3. Ensure all tests pass
             4. Request code review
-            
+
             ---
-            
+
             💡 **Tip**: You can use GitHub Copilot in your IDE to help generate the actual code based on these suggestions.
-            
+
             Would you like me to provide more specific code examples for any particular part?
             `;
-            
+
             // Post the analysis as a comment
             await github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -127,30 +127,30 @@ jobs:
       - name: Create Implementation Template Files
         run: |
           # Create template files based on the user story
-          
+
           # For React components
           if [ -d "React/src/components" ]; then
             cat > React/src/components/IMPLEMENTATION_GUIDE.md << 'EOF'
           # Implementation Guide
-          
+
           ## Steps to Implement This User Story
-          
+
           1. Review the user story in `.azure-devops/`
           2. Follow the acceptance criteria
           3. Implement the required functionality
           4. Add appropriate tests
           5. Update documentation
-          
+
           ## Useful Resources
           - React Documentation: https://react.dev
           - Project README: See root README.md
-          
+
           EOF
           fi
-          
+
           git config user.name "GitHub Actions Bot"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
+
           # Only commit if there are changes
           if [ -n "$(git status --porcelain)" ]; then
             git add .
@@ -163,41 +163,41 @@ jobs:
         with:
           script: |
             const checklist = `## 📋 Implementation Checklist
-            
+
             Please ensure you complete the following before requesting review:
-            
+
             ### Code Quality
             - [ ] Code follows project conventions and style guide
             - [ ] No console.log or debugging code left in
             - [ ] Error handling implemented appropriately
             - [ ] Code is well-commented where necessary
-            
+
             ### Testing
             - [ ] Unit tests added/updated
             - [ ] All existing tests still pass
             - [ ] Manual testing completed
             - [ ] Edge cases considered and tested
-            
+
             ### Documentation
             - [ ] README updated if needed
             - [ ] API documentation updated if applicable
             - [ ] Code comments added for complex logic
-            
+
             ### Acceptance Criteria
             - [ ] All acceptance criteria from the user story are met
             - [ ] Functionality matches the requirements
             - [ ] UX/UI matches design specifications (if applicable)
-            
+
             ### Security & Performance
             - [ ] No security vulnerabilities introduced
             - [ ] Performance impact considered
             - [ ] No unnecessary dependencies added
-            
+
             ---
-            
+
             Once you've checked all items, mark this PR as ready for review! 🚀
             `;
-            
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,

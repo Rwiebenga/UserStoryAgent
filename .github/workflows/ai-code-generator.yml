@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       pr_number:
-        description: 'PR number to generate code for'
+        description: "PR number to generate code for"
         required: true
         type: number
   issue_comment:
@@ -19,11 +19,11 @@ on:
 jobs:
   generate-code:
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: write
       pull-requests: write
-      
+
     steps:
       - name: Get PR Number
         id: pr_number
@@ -61,28 +61,28 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Read User Story
         id: user_story
         run: |
           # Find the user story file
           US_FILE=$(find .azure-devops -name "US-*.md" 2>/dev/null | head -n 1)
-          
+
           if [ -z "$US_FILE" ]; then
             echo "No user story found"
             exit 1
           fi
-          
+
           # Extract user story details
           CONTENT=$(cat "$US_FILE")
           US_ID=$(basename "$US_FILE" .md | sed 's/US-//')
-          
+
           # Parse the content
           TITLE=$(echo "$CONTENT" | grep "^# User Story:" | sed 's/# User Story: //')
           DESCRIPTION=$(echo "$CONTENT" | sed -n '/## Description/,/## Acceptance Criteria/p' | grep -v "^##" | sed '/^$/d')
           CRITERIA=$(echo "$CONTENT" | sed -n '/## Acceptance Criteria/,/## Tasks/p' | grep -v "^##" | sed '/^$/d')
-          
+
           echo "us_id=$US_ID" >> $GITHUB_OUTPUT
           echo "title=$TITLE" >> $GITHUB_OUTPUT
           echo "description<<EOF" >> $GITHUB_OUTPUT
@@ -100,12 +100,12 @@ jobs:
             echo "has_react=true" >> $GITHUB_OUTPUT
             echo "react_components=$(find React/src/components -name '*.jsx' -o -name '*.tsx' 2>/dev/null | wc -l)" >> $GITHUB_OUTPUT
           fi
-          
+
           if [ -d "FindMyEmbassy" ]; then
             echo "has_dotnet=true" >> $GITHUB_OUTPUT
             echo "controllers=$(find FindMyEmbassy/Controllers -name '*Controller.cs' 2>/dev/null | wc -l)" >> $GITHUB_OUTPUT
           fi
-          
+
           # Get data models
           if [ -f "React/public/Data/embassies.json" ]; then
             echo "has_data=true" >> $GITHUB_OUTPUT
@@ -117,15 +117,15 @@ jobs:
           # Extract feature name from user story
           FEATURE_NAME=$(echo "${{ steps.user_story.outputs.title }}" | sed 's/.*want to //' | sed 's/ .*//' | sed 's/[^a-zA-Z]//g')
           COMPONENT_NAME="${FEATURE_NAME^}"  # Capitalize first letter
-          
+
           # Create component directory
           mkdir -p "React/src/components/$COMPONENT_NAME"
-          
+
           # Generate React component based on user story
           cat > "React/src/components/$COMPONENT_NAME/${COMPONENT_NAME}.jsx" << EOF
           import React, { useState, useEffect } from 'react';
           import './${COMPONENT_NAME}.css';
-          
+
           /**
            * $COMPONENT_NAME Component
            * 
@@ -140,13 +140,13 @@ jobs:
             const [data, setData] = useState(null);
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(null);
-          
+
             useEffect(() => {
               // TODO: Implement data fetching logic
               // Based on acceptance criteria from user story
               fetchData();
             }, []);
-          
+
             const fetchData = async () => {
               try {
                 setLoading(true);
@@ -160,15 +160,15 @@ jobs:
                 setLoading(false);
               }
             };
-          
+
             if (loading) {
               return <div className="${COMPONENT_NAME,,}-loading">Loading...</div>;
             }
-          
+
             if (error) {
               return <div className="${COMPONENT_NAME,,}-error">Error: {error}</div>;
             }
-          
+
             return (
               <div className="${COMPONENT_NAME,,}">
                 <h2>$COMPONENT_NAME</h2>
@@ -180,43 +180,43 @@ jobs:
               </div>
             );
           };
-          
+
           export default $COMPONENT_NAME;
           EOF
-          
+
           # Generate CSS file
           cat > "React/src/components/$COMPONENT_NAME/${COMPONENT_NAME}.css" << EOF
           /* $COMPONENT_NAME Styles */
-          
+
           .${COMPONENT_NAME,,} {
             padding: 20px;
             max-width: 1200px;
             margin: 0 auto;
           }
-          
+
           .${COMPONENT_NAME,,}-loading,
           .${COMPONENT_NAME,,}-error {
             text-align: center;
             padding: 40px;
             font-size: 1.2rem;
           }
-          
+
           .${COMPONENT_NAME,,}-error {
             color: #d32f2f;
           }
-          
+
           .${COMPONENT_NAME,,}-content {
             margin-top: 20px;
           }
-          
+
           /* TODO: Add specific styles based on design requirements */
           EOF
-          
+
           # Generate index file
           cat > "React/src/components/$COMPONENT_NAME/index.js" << EOF
           export { default } from './${COMPONENT_NAME}';
           EOF
-          
+
           echo "Generated React component: $COMPONENT_NAME"
 
       - name: Generate .NET Controller (if applicable)
@@ -225,7 +225,7 @@ jobs:
           # Extract feature name
           FEATURE_NAME=$(echo "${{ steps.user_story.outputs.title }}" | sed 's/.*want to //' | sed 's/ .*//' | sed 's/[^a-zA-Z]//g')
           CONTROLLER_NAME="${FEATURE_NAME^}Controller"
-          
+
           # Generate controller
           cat > "FindMyEmbassy/Controllers/${CONTROLLER_NAME}.cs" << 'EOF'
           using System;
@@ -234,7 +234,7 @@ jobs:
           using System.Threading.Tasks;
           using Microsoft.AspNetCore.Mvc;
           using FindMyEmbassy.Models;
-          
+
           namespace FindMyEmbassy.Controllers
           {
               /// <summary>
@@ -293,10 +293,10 @@ jobs:
               }
           }
           EOF
-          
+
           # Replace placeholder with actual controller name
           sed -i "s/CONTROLLER_NAME_PLACEHOLDER/$CONTROLLER_NAME/g" "FindMyEmbassy/Controllers/${CONTROLLER_NAME}.cs"
-          
+
           echo "Generated .NET controller: $CONTROLLER_NAME"
 
       - name: Generate Model/DTO (if needed)
@@ -304,11 +304,11 @@ jobs:
         run: |
           FEATURE_NAME=$(echo "${{ steps.user_story.outputs.title }}" | sed 's/.*want to //' | sed 's/ .*//' | sed 's/[^a-zA-Z]//g')
           MODEL_NAME="${FEATURE_NAME^}Model"
-          
+
           cat > "FindMyEmbassy/Models/${MODEL_NAME}.cs" << 'EOF'
           using System;
           using System.ComponentModel.DataAnnotations;
-          
+
           namespace FindMyEmbassy.Models
           {
               /// <summary>
@@ -329,9 +329,9 @@ jobs:
               }
           }
           EOF
-          
+
           sed -i "s/MODEL_NAME_PLACEHOLDER/$MODEL_NAME/g" "FindMyEmbassy/Models/${MODEL_NAME}.cs"
-          
+
           echo "Generated .NET model: $MODEL_NAME"
 
       - name: Update App.jsx (integrate new component)
@@ -339,7 +339,7 @@ jobs:
         run: |
           FEATURE_NAME=$(echo "${{ steps.user_story.outputs.title }}" | sed 's/.*want to //' | sed 's/ .*//' | sed 's/[^a-zA-Z]//g')
           COMPONENT_NAME="${FEATURE_NAME^}"
-          
+
           # Add import and TODO comment to App.jsx if it exists
           if [ -f "React/src/App.jsx" ]; then
             # Create a backup
@@ -358,78 +358,78 @@ jobs:
         run: |
           cat > "IMPLEMENTATION_GUIDE_US-${{ steps.user_story.outputs.us_id }}.md" << 'EOF'
           # Implementation Guide for US-${{ steps.user_story.outputs.us_id }}
-          
+
           ## User Story
           **Title:** ${{ steps.user_story.outputs.title }}
-          
+
           **Description:**
           ${{ steps.user_story.outputs.description }}
-          
+
           **Acceptance Criteria:**
           ${{ steps.user_story.outputs.criteria }}
-          
+
           ---
-          
+
           ## Generated Files
-          
+
           The AI agent has generated the following starter files:
-          
+
           ### Frontend (React)
           - `React/src/components/[ComponentName]/[ComponentName].jsx` - Main component
           - `React/src/components/[ComponentName]/[ComponentName].css` - Component styles
           - `React/src/components/[ComponentName]/index.js` - Export file
-          
+
           ### Backend (.NET)
           - `FindMyEmbassy/Controllers/[Feature]Controller.cs` - API controller
           - `FindMyEmbassy/Models/[Feature]Model.cs` - Data model
-          
+
           ---
-          
+
           ## Next Steps
-          
+
           1. **Review Generated Code**
              - Check the generated files in your IDE
              - Verify they align with the acceptance criteria
-          
+
           2. **Implement Business Logic**
              - Replace TODO comments with actual implementation
              - Add proper error handling
              - Implement data validation
-          
+
           3. **Connect Frontend to Backend**
              - Update API endpoints in React components
              - Test data flow between frontend and backend
-          
+
           4. **Testing**
              - Write unit tests for new functionality
              - Test all acceptance criteria
              - Manual testing in the browser
-          
+
           5. **Code Review**
              - Request review from team members
              - Address any feedback
              - Ensure code follows project standards
-          
+
           ---
-          
+
           ## Helpful Commands
-          
+
           ```bash
           # Run React app
           cd React
           npm install
           npm start
-          
+
           # Run .NET backend
           cd FindMyEmbassy
           dotnet restore
           dotnet run
           ```
-          
+
           ---
-          
+
           ## Questions or Issues?
-          
+
           - Comment on this PR for help
           - Tag @Rwiebenga for questions
           - Check the project README for setup instructions
@@ -439,9 +439,9 @@ jobs:
         run: |
           git config user.name "AI Code Generator Bot"
           git config user.email "ai-bot[bot]@users.noreply.github.com"
-          
+
           git add .
-          
+
           if [ -n "$(git status --porcelain)" ]; then
             git commit -m "feat(US-${{ steps.user_story.outputs.us_id }}): AI-generated code scaffolding
 
@@ -465,36 +465,36 @@ jobs:
         with:
           script: |
             const comment = `## 🤖 AI Code Generation Complete!
-            
+
             I've analyzed the user story and generated starter code for you. Here's what I created:
-            
+
             ### ✅ Generated Files:
             - React component with basic structure
             - .NET controller and model
             - CSS styles
             - Implementation guide
-            
+
             ### 📝 Next Steps:
             1. Pull the latest changes from this branch
             2. Review the generated code in your IDE
             3. Follow the implementation guide (see \`IMPLEMENTATION_GUIDE_US-${{ steps.user_story.outputs.us_id }}.md\`)
             4. Replace TODO comments with actual business logic
             5. Test against acceptance criteria
-            
+
             ### 💡 Tips:
             - Use GitHub Copilot in your IDE for intelligent code completion
             - The generated code includes comments with the acceptance criteria
             - All files follow the project structure and conventions
-            
+
             ### ⚠️ Important:
             This is **starter code** to help you get started quickly. You still need to:
             - Implement the actual business logic
             - Add proper error handling
             - Write tests
             - Ensure it meets all acceptance criteria
-            
+
             Happy coding! 🚀`;
-            
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,

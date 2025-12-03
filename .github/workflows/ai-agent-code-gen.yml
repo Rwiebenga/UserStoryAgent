@@ -4,24 +4,24 @@ on:
   workflow_dispatch:
     inputs:
       pr_number:
-        description: 'PR number to analyze'
+        description: "PR number to analyze"
         required: true
         type: number
   pull_request:
     types: [opened]
     branches:
       - main
-    
+
 jobs:
   ai-code-generation:
     # Run on all PRs with azure-devops label or when manually triggered
     if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'azure-devops')
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: write
       pull-requests: write
-      
+
     steps:
       - name: Get PR Details
         id: pr
@@ -34,12 +34,12 @@ jobs:
               repo: context.repo.repo,
               pull_number: prNumber
             });
-            
+
             core.setOutput('number', prNumber);
             core.setOutput('branch', pr.head.ref);
             core.setOutput('title', pr.title);
             core.setOutput('body', pr.body);
-            
+
             return pr;
 
       - name: Checkout PR branch
@@ -53,16 +53,16 @@ jobs:
         run: |
           # Find and read the user story file
           US_FILE=$(find .azure-devops -name "US-*.md" 2>/dev/null | head -n 1)
-          
+
           if [ -z "$US_FILE" ]; then
             echo "No user story file found"
             echo "found=false" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
+
           echo "found=true" >> $GITHUB_OUTPUT
           echo "file=$US_FILE" >> $GITHUB_OUTPUT
-          
+
           # Read the content
           CONTENT=$(cat "$US_FILE")
           echo "content<<EOF" >> $GITHUB_OUTPUT
@@ -74,7 +74,7 @@ jobs:
         run: |
           echo "## Project Analysis" > analysis.md
           echo "" >> analysis.md
-          
+
           # Detect project type
           if [ -f "React/package.json" ]; then
             echo "- Project Type: React + .NET" >> analysis.md
@@ -88,7 +88,7 @@ jobs:
             echo "- Project Type: .NET" >> analysis.md
             echo "project_type=dotnet" >> $GITHUB_OUTPUT
           fi
-          
+
           # List key files
           echo "" >> analysis.md
           echo "### Key Files:" >> analysis.md
@@ -107,34 +107,34 @@ jobs:
             const fs = require('fs');
             const userStory = process.env.USER_STORY;
             const prTitle = process.env.PR_TITLE;
-            
+
             // Parse user story to extract key information
             const titleMatch = userStory.match(/# User Story: (.+)/);
             const descMatch = userStory.match(/## Description\s+(.+?)(?=##|$)/s);
             const criteriaMatch = userStory.match(/## Acceptance Criteria\s+(.+?)(?=##|$)/s);
-            
+
             const title = titleMatch ? titleMatch[1] : prTitle;
             const description = descMatch ? descMatch[1].trim() : '';
             const criteria = criteriaMatch ? criteriaMatch[1].trim() : '';
-            
+
             // Generate implementation suggestions
             const suggestions = `## 🤖 AI-Generated Implementation Plan
-            
+
             ### User Story: ${title}
-            
+
             **Description:** ${description || 'See user story file for details'}
-            
+
             **Acceptance Criteria:**
             ${criteria || 'See user story file for details'}
-            
+
             ---
-            
+
             ### Recommended Implementation Approach
-            
+
             #### Step 1: Frontend Changes (React)
-            
+
             Based on the user story, you may need to:
-            
+
             1. **Create/Modify Components:**
                \`\`\`bash
                # Suggested file structure
@@ -144,17 +144,17 @@ jobs:
                │   ├── [FeatureName].css
                │   └── index.js
                \`\`\`
-            
+
             2. **Update State Management:**
                - Add necessary state hooks
                - Consider context if state needs to be shared
-            
+
             3. **API Integration:**
                - Create API service calls in \`React/src/services/\`
                - Handle loading and error states
-            
+
             #### Step 2: Backend Changes (.NET)
-            
+
             1. **Controller Updates:**
                \`\`\`csharp
                // Example: FindMyEmbassy/Controllers/[Feature]Controller.cs
@@ -165,42 +165,42 @@ jobs:
                    // Implementation
                }
                \`\`\`
-            
+
             2. **Models/DTOs:**
                - Create/update models in \`FindMyEmbassy/Models/\`
-            
+
             3. **Business Logic:**
                - Implement service layer if needed
-            
+
             #### Step 3: Testing
-            
+
             - [ ] Add unit tests for new components
             - [ ] Test API endpoints
             - [ ] Manual testing in browser
             - [ ] Verify acceptance criteria
-            
+
             ---
-            
+
             ### 🎯 Next Steps for Developer
-            
+
             1. **Review this plan** and adjust based on specific requirements
             2. **Start with the backend** if API changes are needed
             3. **Implement frontend** components
             4. **Test thoroughly** against acceptance criteria
             5. **Update documentation** if needed
-            
+
             ---
-            
+
             ### 💡 AI Assistance Available
-            
+
             To get more specific code suggestions:
             - Use **GitHub Copilot** in your IDE
             - Add a comment like \`@copilot suggest implementation for [specific feature]\`
             - The AI will provide context-aware code completions
-            
+
             **Need help?** Comment on this PR with \`@github-actions help\` for more guidance!
             `;
-            
+
             // Post the suggestions as a comment
             await github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -208,40 +208,40 @@ jobs:
               issue_number: ${{ steps.pr.outputs.number }},
               body: suggestions
             });
-            
+
             return suggestions;
 
       - name: Create Code Templates
         run: |
           # Create template files to help the developer get started
-          
+
           git config user.name "AI Code Agent"
           git config user.email "ai-agent[bot]@users.noreply.github.com"
-          
+
           # Create implementation notes file
           cat > IMPLEMENTATION_NOTES.md << 'EOF'
           # Implementation Notes
-          
+
           This file contains AI-generated suggestions for implementing the user story.
-          
+
           ## Quick Start
-          
+
           1. Review the AI suggestions in the PR comments
           2. Follow the step-by-step implementation plan
           3. Use GitHub Copilot for code completion assistance
           4. Check off acceptance criteria as you complete them
-          
+
           ## Resources
-          
+
           - User Story: See `.azure-devops/US-*.md`
           - PR Discussion: Check PR comments for AI suggestions
           - Project README: See `README.md` for setup instructions
-          
+
           ## Questions?
-          
+
           Tag @Rwiebenga or comment on the PR for help!
           EOF
-          
+
           git add IMPLEMENTATION_NOTES.md
           git commit -m "docs: Add AI-generated implementation notes" || echo "No changes to commit"
           git push || echo "No changes to push"
