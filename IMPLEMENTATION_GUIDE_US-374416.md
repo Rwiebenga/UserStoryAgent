@@ -1,7 +1,7 @@
 # Implementation Guide for US-374416
 
 ## User Story
-**Title:** choose citizen
+**Title:** color scheme
 
 **Description:**
 $DESCRIPTION
