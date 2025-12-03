@@ -1,0 +1,24 @@
+/* Color Styles */
+
+.color {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.color-loading,
+.color-error {
+  text-align: center;
+  padding: 40px;
+  font-size: 1.2rem;
+}
+
+.color-error {
+  color: #d32f2f;
+}
+
+.color-content {
+  margin-top: 20px;
+}
+
+/* TODO: Add specific styles based on design requirements */
