@@ -93,13 +93,37 @@ jobs:
         run: |
           git config user.name "Azure DevOps Bot"
           git config user.email "azuredevops-bot@users.noreply.github.com"
+          
+      - name: Determine branch name
+        id: branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BASE_BRANCH="feature/US-${{ steps.extract.outputs.work_item_id }}"
+          BRANCH_NAME="$BASE_BRANCH"
+          VERSION=1
+          
+          # If branch exists and has an open PR, create a new version
+          while git ls-remote --exit-code --heads origin "$BRANCH_NAME" &>/dev/null; do
+            if gh pr view "$BRANCH_NAME" --json state -q .state 2>/dev/null | grep -q "OPEN"; then
+              VERSION=$((VERSION + 1))
+              BRANCH_NAME="${BASE_BRANCH}-v${VERSION}"
+              echo "Branch $BASE_BRANCH has an open PR, trying $BRANCH_NAME"
+            else
+              echo "Branch $BRANCH_NAME exists but PR is closed, will reuse it"
+              break
+            fi
+          done
+          
+          echo "Final branch name: $BRANCH_NAME"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
 
       - name: Create or update feature branch
         env:
           DESCRIPTION: ${{ steps.multiline.outputs.description }}
           CRITERIA: ${{ steps.multiline.outputs.acceptance_criteria }}
         run: |
-          BRANCH_NAME="${{ steps.extract.outputs.branch_name }}"
+          BRANCH_NAME="${{ steps.branch.outputs.branch_name }}"
           
           # Check if branch exists remotely
           if git ls-remote --exit-code --heads origin "$BRANCH_NAME"; then
@@ -181,28 +205,22 @@ jobs:
           EOFPR
           )
 
-          # Create the pull request (or skip if it already exists)
-          if gh pr view ${{ steps.extract.outputs.branch_name }} &>/dev/null; then
-            echo "PR already exists for this branch (#$(gh pr view ${{ steps.extract.outputs.branch_name }} --json number -q .number))"
-            echo "The user story file has been updated in the branch. The PR description will remain as-is."
-            echo "To update the PR description, close the existing PR and trigger this workflow again."
-          else
-            echo "Creating new PR"
-            gh pr create \
-              --title "${{ steps.extract.outputs.pr_title }}" \
-              --body "$PR_BODY" \
-              --base main \
-              --head ${{ steps.extract.outputs.branch_name }} \
-              --label "user-story,azure-devops" \
-              --assignee "${{ steps.extract.outputs.assigned_to }}"
-          fi
+          # Create the pull request
+          echo "Creating new PR"
+          gh pr create \
+            --title "${{ steps.extract.outputs.pr_title }}" \
+            --body "$PR_BODY" \
+            --base main \
+            --head ${{ steps.branch.outputs.branch_name }} \
+            --label "user-story,azure-devops" \
+            --assignee "${{ steps.extract.outputs.assigned_to }}"
 
       - name: Comment on Pull Request
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           # Get the PR number
-          PR_NUMBER=$(gh pr view ${{ steps.extract.outputs.branch_name }} --json number -q .number)
+          PR_NUMBER=$(gh pr view ${{ steps.branch.outputs.branch_name }} --json number -q .number)
 
           # Add a comment with instructions
           gh pr comment $PR_NUMBER --body "👋 **Engineer**, this PR was created automatically from Azure DevOps.
@@ -220,7 +238,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           # Get the PR number
-          PR_NUMBER=$(gh pr view ${{ steps.extract.outputs.branch_name }} --json number -q .number)
+          PR_NUMBER=$(gh pr view ${{ steps.branch.outputs.branch_name }} --json number -q .number)
 
           # Wait a moment for PR to be fully created
           sleep 5
@@ -231,4 +249,4 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             https://api.github.com/repos/${{ github.repository }}/dispatches \
-            -d "{\"event_type\":\"generate-code\",\"client_payload\":{\"pr_number\":$PR_NUMBER,\"branch\":\"${{ steps.extract.outputs.branch_name }}\"}}"
+            -d "{\"event_type\":\"generate-code\",\"client_payload\":{\"pr_number\":$PR_NUMBER,\"branch\":\"${{ steps.branch.outputs.branch_name }}\"}}"
