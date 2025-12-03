@@ -1,0 +1,127 @@
+name: Create PR from Azure DevOps User Story
+
+on:
+  repository_dispatch:
+    types: [azure-devops-user-story-created]
+
+jobs:
+  create-pull-request:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract user story details
+        id: extract
+        run: |
+          echo "User Story ID: ${{ github.event.client_payload.workItemId }}"
+          echo "Title: ${{ github.event.client_payload.title }}"
+          echo "Description: ${{ github.event.client_payload.description }}"
+
+          # Create branch name from user story ID
+          BRANCH_NAME="feature/US-${{ github.event.client_payload.workItemId }}"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+          # Sanitize title for PR
+          TITLE="${{ github.event.client_payload.title }}"
+          echo "pr_title=US-${{ github.event.client_payload.workItemId }}: $TITLE" >> $GITHUB_OUTPUT
+
+      - name: Configure Git
+        run: |
+          git config user.name "Azure DevOps Bot"
+          git config user.email "azuredevops-bot@users.noreply.github.com"
+
+      - name: Create feature branch
+        run: |
+          git checkout -b ${{ steps.extract.outputs.branch_name }}
+
+          # Create a placeholder file for the feature
+          mkdir -p .azure-devops
+          cat > .azure-devops/US-${{ github.event.client_payload.workItemId }}.md << 'EOF'
+          # User Story: ${{ github.event.client_payload.title }}
+
+          **Azure DevOps Work Item ID:** ${{ github.event.client_payload.workItemId }}
+
+          ## Description
+          ${{ github.event.client_payload.description }}
+
+          ## Acceptance Criteria
+          ${{ github.event.client_payload.acceptanceCriteria }}
+
+          ## Tasks
+          - [ ] Implementation
+          - [ ] Unit Tests
+          - [ ] Documentation
+          - [ ] Code Review
+
+          ---
+          *This file was automatically generated from Azure DevOps*
+          EOF
+
+          git add .azure-devops/US-${{ github.event.client_payload.workItemId }}.md
+          git commit -m "feat: Initialize user story US-${{ github.event.client_payload.workItemId }}"
+          git push origin ${{ steps.extract.outputs.branch_name }}
+
+      - name: Create Pull Request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Create PR body
+          PR_BODY=$(cat << 'EOF'
+          ## 📋 User Story
+
+          **Azure DevOps Work Item:** [${{ github.event.client_payload.workItemId }}](${{ github.event.client_payload.url }})
+
+          ### Description
+          ${{ github.event.client_payload.description }}
+
+          ### Acceptance Criteria
+          ${{ github.event.client_payload.acceptanceCriteria }}
+
+          ---
+
+          ### ✅ Engineer Checklist
+          - [ ] Code implements all acceptance criteria
+          - [ ] Unit tests added/updated
+          - [ ] Integration tests pass
+          - [ ] Code follows project coding standards
+          - [ ] Documentation updated
+          - [ ] No merge conflicts with develop
+
+          ### 🔗 Related Links
+          - [Azure DevOps User Story](${{ github.event.client_payload.url }})
+
+          ---
+          *This PR was automatically created from Azure DevOps User Story #${{ github.event.client_payload.workItemId }}*
+          EOF
+          )
+
+          # Create the pull request
+          gh pr create \
+            --title "${{ steps.extract.outputs.pr_title }}" \
+            --body "$PR_BODY" \
+            --base Develop \
+            --head ${{ steps.extract.outputs.branch_name }} \
+            --label "user-story,azure-devops" \
+            --assignee "${{ github.event.client_payload.assignedTo }}"
+
+      - name: Comment on Pull Request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Get the PR number
+          PR_NUMBER=$(gh pr view ${{ steps.extract.outputs.branch_name }} --json number -q .number)
+
+          # Add a comment with instructions
+          gh pr comment $PR_NUMBER --body "👋 **Engineer**, this PR was created automatically from Azure DevOps.
+
+          **Next Steps:**
+          1. Review the user story requirements in the Azure DevOps link above
+          2. Implement the feature in this branch
+          3. Ensure all acceptance criteria are met
+          4. Request review when ready
+
+          Once approved and merged, please update the Azure DevOps work item status."

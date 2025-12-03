@@ -1,0 +1,92 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="country-title-bar row">
+    <img src="" class="col-md-3 col-xs-3 col-sm-3" /><h1 class="display-4 country-name col-md-9 col-xs-9 col-sm-9"></h1>
+</div>
+
+<div class="row">
+    <div class="col-md-12 col-xs-12 col-sm-12">
+        <div class="row relative">
+            <a class="col-md-6 col-xs-6 col-sm-6 text-center police-dept" href="">
+                <div class="icon">
+                    <div class="title">Politie</div>
+                    <img src="~/images/police_icon_shade.png" />
+                    <div class="number"></div>
+
+                </div>
+            </a>
+            <a class="col-md-6 col-xs-6 col-sm-6 text-center ambulance-dept" href="">
+                <div class="icon">
+                    <div class="title">Ambulance</div>
+                    <img src="~/images/ambulance_icon_shade.png" />
+                    <div class="number"></div>
+
+                </div>
+            </a>
+            <a class="col-md-6 col-xs-6 col-sm-6 text-center fire-dept" href="">
+                <div class="icon">
+                    <div class="title">Brandweer</div>
+                    <img src="~/images/fire_icon_shade.png" />
+                    <div class="number"></div>
+
+                </div>
+            </a>
+            <a class="col-md-6 col-xs-6 col-sm-6 text-center embassy-dept" href="">
+                <div class="icon">
+                    <div class="title">Ambassade</div>
+                    <img src="~/images/embassador_icon_shade.png" />
+                    <div class="number"></div>
+
+                </div>
+            </a>
+            <div class="flag-icon">
+                <img src="~/images/phone_icon.png" />
+                @*<div class="shadow"></div>*@
+            </div>
+        </div>
+        <div class="embassy-information">
+            <h1 class="display-4">Ambassade informatie</h1>
+
+            <div class="row">
+                <div class="col-md-2 col-xs-2 col-sm-2 embassy-icon">
+                    <span class="glyphicon glyphicon-time"></span>
+                </div>
+                <div class="col-md-10 col-xs-10 col-sm-10 opening-times">
+
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 col-xs-2 col-sm-2 embassy-icon">
+                    <span class="glyphicon glyphicon-envelope"></span>
+                </div>
+                <div class="col-md-10 col-xs-10 col-sm-10 e-mail">
+
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 col-xs-2 col-sm-2 embassy-icon">
+                    <span class="glyphicon glyphicon-user"></span>
+                </div>
+                <div class="col-md-10 col-xs-10 col-sm-10 name-embassador">
+
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 col-xs-2 col-sm-2 embassy-icon">
+                    <span class="glyphicon glyphicon-home"></span>
+                </div>
+                <div class="col-md-10 col-xs-10 col-sm-10 address-embassy">
+
+                </div>
+            </div>
+
+        </div>
+        <div id="map"></div>
+
+        <script async defer
+                src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBCt_EBdFQETts8o0j34gox7GEC_ttnxTk">
+        </script>
+    </div>
+</div>

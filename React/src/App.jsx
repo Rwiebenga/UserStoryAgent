@@ -1,0 +1,101 @@
+import { useState, useEffect } from "react";
+import Navbar from "./components/Navbar";
+import EmbassyInfo from "./components/EmbassyInfo";
+import "./App.css";
+
+function App() {
+  const [embassies, setEmbassies] = useState([]);
+  const [currentEmbassy, setCurrentEmbassy] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Load embassies data
+    fetch("/Data/embassies.json")
+      .then((response) => response.json())
+      .then((data) => {
+        setEmbassies(data.embassies);
+        setLoading(false);
+        // Get user's location
+        getUserLocation(data.embassies);
+      })
+      .catch((error) => {
+        console.error("Error loading embassies:", error);
+        setLoading(false);
+      });
+  }, []);
+
+  const getUserLocation = (embassiesData) => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+
+          // Use Google Geocoding API to get country
+          const apiKey = "AIzaSyBCt_EBdFQETts8o0j34gox7GEC_ttnxTk";
+          fetch(
+            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}&language=nl-NL`
+          )
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.results && data.results[0]) {
+                const addressComponents = data.results[0].address_components;
+                const countryComponent = addressComponents.find((component) =>
+                  component.types.includes("country")
+                );
+
+                if (countryComponent) {
+                  const countryName = countryComponent.long_name.toLowerCase();
+                  const embassy = embassiesData.find(
+                    (e) => e.country_name === countryName
+                  );
+                  if (embassy) {
+                    setCurrentEmbassy(embassy);
+                    setSearchTerm(embassy.original_country_name);
+                  }
+                }
+              }
+            })
+            .catch((error) => console.error("Error getting location:", error));
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+        }
+      );
+    }
+  };
+
+  const handleSelectEmbassy = (embassy) => {
+    setCurrentEmbassy(embassy);
+    setSearchTerm(embassy.original_country_name);
+  };
+
+  return (
+    <div className="app">
+      <Navbar
+        embassies={embassies}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        onSelectEmbassy={handleSelectEmbassy}
+      />
+
+      <div className="content">
+        {loading ? (
+          <div className="loading">Loading...</div>
+        ) : currentEmbassy ? (
+          <EmbassyInfo embassy={currentEmbassy} />
+        ) : (
+          <div className="welcome">
+            <h2>Welcome to Find My Embassy</h2>
+            <p>
+              Search for a country above to find emergency numbers and embassy
+              information.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default App;

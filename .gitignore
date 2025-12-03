@@ -1,0 +1,4 @@
+# Azure DevOps User Stories
+# These files are auto-generated from Azure DevOps and should be committed
+# to track user story requirements with the feature branch
+!.azure-devops/*.md
