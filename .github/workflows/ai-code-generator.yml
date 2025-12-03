@@ -1,6 +1,8 @@
 name: AI Agent - Auto-Generate Code Implementation
 
 on:
+  repository_dispatch:
+    types: [generate-code]
   pull_request:
     types: [opened]
     branches:
@@ -30,6 +32,8 @@ jobs:
             echo "number=${{ inputs.pr_number }}" >> $GITHUB_OUTPUT
           elif [ "${{ github.event_name }}" == "issue_comment" ]; then
             echo "number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" == "repository_dispatch" ]; then
+            echo "number=${{ github.event.client_payload.pr_number }}" >> $GITHUB_OUTPUT
           else
             echo "number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
           fi
