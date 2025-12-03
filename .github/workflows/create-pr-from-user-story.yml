@@ -3,6 +3,33 @@ name: Create PR from Azure DevOps User Story
 on:
   repository_dispatch:
     types: [azure-devops-user-story-created]
+  # Also support direct webhook calls from Azure DevOps
+  workflow_dispatch:
+    inputs:
+      workItemId:
+        description: 'Work Item ID'
+        required: true
+        type: string
+      title:
+        description: 'User Story Title'
+        required: true
+        type: string
+      description:
+        description: 'Description'
+        required: false
+        type: string
+      acceptanceCriteria:
+        description: 'Acceptance Criteria'
+        required: false
+        type: string
+      assignedTo:
+        description: 'Assigned To'
+        required: false
+        type: string
+      url:
+        description: 'Azure DevOps URL'
+        required: false
+        type: string
 
 jobs:
   create-pull-request:
@@ -17,17 +44,39 @@ jobs:
       - name: Extract user story details
         id: extract
         run: |
-          echo "User Story ID: ${{ github.event.client_payload.workItemId }}"
-          echo "Title: ${{ github.event.client_payload.title }}"
-          echo "Description: ${{ github.event.client_payload.description }}"
+          # Support both repository_dispatch and workflow_dispatch
+          if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
+            WORK_ITEM_ID="${{ github.event.client_payload.workItemId }}"
+            TITLE="${{ github.event.client_payload.title }}"
+            DESCRIPTION="${{ github.event.client_payload.description }}"
+            ACCEPTANCE_CRITERIA="${{ github.event.client_payload.acceptanceCriteria }}"
+            ASSIGNED_TO="${{ github.event.client_payload.assignedTo }}"
+            URL="${{ github.event.client_payload.url }}"
+          else
+            WORK_ITEM_ID="${{ inputs.workItemId }}"
+            TITLE="${{ inputs.title }}"
+            DESCRIPTION="${{ inputs.description }}"
+            ACCEPTANCE_CRITERIA="${{ inputs.acceptanceCriteria }}"
+            ASSIGNED_TO="${{ inputs.assignedTo }}"
+            URL="${{ inputs.url }}"
+          fi
+          
+          echo "User Story ID: $WORK_ITEM_ID"
+          echo "Title: $TITLE"
+          echo "Description: $DESCRIPTION"
 
           # Create branch name from user story ID
-          BRANCH_NAME="feature/US-${{ github.event.client_payload.workItemId }}"
+          BRANCH_NAME="feature/US-$WORK_ITEM_ID"
           echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "work_item_id=$WORK_ITEM_ID" >> $GITHUB_OUTPUT
+          echo "title=$TITLE" >> $GITHUB_OUTPUT
+          echo "description=$DESCRIPTION" >> $GITHUB_OUTPUT
+          echo "acceptance_criteria=$ACCEPTANCE_CRITERIA" >> $GITHUB_OUTPUT
+          echo "assigned_to=$ASSIGNED_TO" >> $GITHUB_OUTPUT
+          echo "url=$URL" >> $GITHUB_OUTPUT
 
           # Sanitize title for PR
-          TITLE="${{ github.event.client_payload.title }}"
-          echo "pr_title=US-${{ github.event.client_payload.workItemId }}: $TITLE" >> $GITHUB_OUTPUT
+          echo "pr_title=US-$WORK_ITEM_ID: $TITLE" >> $GITHUB_OUTPUT
 
       - name: Configure Git
         run: |
@@ -40,16 +89,16 @@ jobs:
 
           # Create a placeholder file for the feature
           mkdir -p .azure-devops
-          cat > .azure-devops/US-${{ github.event.client_payload.workItemId }}.md << 'EOF'
-          # User Story: ${{ github.event.client_payload.title }}
+          cat > .azure-devops/US-${{ steps.extract.outputs.work_item_id }}.md << 'EOF'
+          # User Story: ${{ steps.extract.outputs.title }}
 
-          **Azure DevOps Work Item ID:** ${{ github.event.client_payload.workItemId }}
+          **Azure DevOps Work Item ID:** ${{ steps.extract.outputs.work_item_id }}
 
           ## Description
-          ${{ github.event.client_payload.description }}
+          ${{ steps.extract.outputs.description }}
 
           ## Acceptance Criteria
-          ${{ github.event.client_payload.acceptanceCriteria }}
+          ${{ steps.extract.outputs.acceptance_criteria }}
 
           ## Tasks
           - [ ] Implementation
@@ -61,8 +110,8 @@ jobs:
           *This file was automatically generated from Azure DevOps*
           EOF
 
-          git add .azure-devops/US-${{ github.event.client_payload.workItemId }}.md
-          git commit -m "feat: Initialize user story US-${{ github.event.client_payload.workItemId }}"
+          git add .azure-devops/US-${{ steps.extract.outputs.work_item_id }}.md
+          git commit -m "feat: Initialize user story US-${{ steps.extract.outputs.work_item_id }}"
           git push origin ${{ steps.extract.outputs.branch_name }}
 
       - name: Create Pull Request
@@ -73,13 +122,13 @@ jobs:
           PR_BODY=$(cat << 'EOF'
           ## 📋 User Story
 
-          **Azure DevOps Work Item:** [${{ github.event.client_payload.workItemId }}](${{ github.event.client_payload.url }})
+          **Azure DevOps Work Item:** [${{ steps.extract.outputs.work_item_id }}](${{ steps.extract.outputs.url }})
 
           ### Description
-          ${{ github.event.client_payload.description }}
+          ${{ steps.extract.outputs.description }}
 
           ### Acceptance Criteria
-          ${{ github.event.client_payload.acceptanceCriteria }}
+          ${{ steps.extract.outputs.acceptance_criteria }}
 
           ---
 
@@ -92,10 +141,10 @@ jobs:
           - [ ] No merge conflicts with develop
 
           ### 🔗 Related Links
-          - [Azure DevOps User Story](${{ github.event.client_payload.url }})
+          - [Azure DevOps User Story](${{ steps.extract.outputs.url }})
 
           ---
-          *This PR was automatically created from Azure DevOps User Story #${{ github.event.client_payload.workItemId }}*
+          *This PR was automatically created from Azure DevOps User Story #${{ steps.extract.outputs.work_item_id }}*
           EOF
           )
 
@@ -103,10 +152,10 @@ jobs:
           gh pr create \
             --title "${{ steps.extract.outputs.pr_title }}" \
             --body "$PR_BODY" \
-            --base Develop \
+            --base main \
             --head ${{ steps.extract.outputs.branch_name }} \
             --label "user-story,azure-devops" \
-            --assignee "${{ github.event.client_payload.assignedTo }}"
+            --assignee "${{ steps.extract.outputs.assigned_to }}" || true
 
       - name: Comment on Pull Request
         env:
