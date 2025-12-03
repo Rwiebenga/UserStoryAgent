@@ -5,10 +5,17 @@ on:
     types: [opened]
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to generate code for'
+        required: true
+        type: number
+  issue_comment:
+    types: [created]
 
 jobs:
   generate-code:
-    if: contains(github.event.pull_request.labels.*.name, 'azure-devops')
     runs-on: ubuntu-latest
     
     permissions:
@@ -16,10 +23,34 @@ jobs:
       pull-requests: write
       
     steps:
+      - name: Get PR Number
+        id: pr_number
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "number=${{ inputs.pr_number }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" == "issue_comment" ]; then
+            echo "number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+          else
+            echo "number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get PR Branch
+        id: pr_info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: ${{ steps.pr_number.outputs.number }}
+            });
+            core.setOutput('branch', pr.head.ref);
+            return pr;
+
       - name: Checkout PR branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: ${{ steps.pr_info.outputs.branch }}
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
@@ -463,6 +494,6 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
+              issue_number: ${{ steps.pr_number.outputs.number }},
               body: comment
             });
