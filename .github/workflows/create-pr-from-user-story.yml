@@ -48,35 +48,42 @@ jobs:
           if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
             WORK_ITEM_ID="${{ github.event.client_payload.workItemId }}"
             TITLE="${{ github.event.client_payload.title }}"
-            DESCRIPTION="${{ github.event.client_payload.description }}"
-            ACCEPTANCE_CRITERIA="${{ github.event.client_payload.acceptanceCriteria }}"
-            ASSIGNED_TO="${{ github.event.client_payload.assignedTo }}"
             URL="${{ github.event.client_payload.url }}"
+            ASSIGNED_TO="${{ github.event.client_payload.assignedTo }}"
           else
             WORK_ITEM_ID="${{ inputs.workItemId }}"
             TITLE="${{ inputs.title }}"
-            DESCRIPTION="${{ inputs.description }}"
-            ACCEPTANCE_CRITERIA="${{ inputs.acceptanceCriteria }}"
-            ASSIGNED_TO="${{ inputs.assignedTo }}"
             URL="${{ inputs.url }}"
+            ASSIGNED_TO="${{ inputs.assignedTo }}"
           fi
 
           echo "User Story ID: $WORK_ITEM_ID"
           echo "Title: $TITLE"
-          echo "Description: $DESCRIPTION"
 
           # Create branch name from user story ID
           BRANCH_NAME="feature/US-$WORK_ITEM_ID"
           echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
           echo "work_item_id=$WORK_ITEM_ID" >> $GITHUB_OUTPUT
           echo "title=$TITLE" >> $GITHUB_OUTPUT
-          echo "description=$DESCRIPTION" >> $GITHUB_OUTPUT
-          echo "acceptance_criteria=$ACCEPTANCE_CRITERIA" >> $GITHUB_OUTPUT
           echo "assigned_to=$ASSIGNED_TO" >> $GITHUB_OUTPUT
           echo "url=$URL" >> $GITHUB_OUTPUT
 
           # Sanitize title for PR
           echo "pr_title=US-$WORK_ITEM_ID: $TITLE" >> $GITHUB_OUTPUT
+          
+      - name: Extract multiline fields
+        id: multiline
+        uses: actions/github-script@v7
+        env:
+          DESCRIPTION: ${{ github.event.client_payload.description || inputs.description || '' }}
+          CRITERIA: ${{ github.event.client_payload.acceptanceCriteria || inputs.acceptanceCriteria || '' }}
+        with:
+          script: |
+            const description = process.env.DESCRIPTION || '';
+            const criteria = process.env.CRITERIA || '';
+            
+            core.setOutput('description', description);
+            core.setOutput('acceptance_criteria', criteria);
 
       - name: Configure Git
         run: |
@@ -84,6 +91,9 @@ jobs:
           git config user.email "azuredevops-bot@users.noreply.github.com"
 
       - name: Create feature branch
+        env:
+          DESCRIPTION: ${{ steps.multiline.outputs.description }}
+          CRITERIA: ${{ steps.multiline.outputs.acceptance_criteria }}
         run: |
           git checkout -b ${{ steps.extract.outputs.branch_name }}
 
@@ -95,10 +105,10 @@ jobs:
           **Azure DevOps Work Item ID:** ${{ steps.extract.outputs.work_item_id }}
 
           ## Description
-          ${{ steps.extract.outputs.description }}
+          $DESCRIPTION
 
           ## Acceptance Criteria
-          ${{ steps.extract.outputs.acceptance_criteria }}
+          $CRITERIA
 
           ## Tasks
           - [ ] Implementation
@@ -117,18 +127,20 @@ jobs:
       - name: Create Pull Request
         env:
           GH_TOKEN: ${{ github.token }}
+          DESCRIPTION: ${{ steps.multiline.outputs.description }}
+          CRITERIA: ${{ steps.multiline.outputs.acceptance_criteria }}
         run: |
           # Create PR body
-          PR_BODY=$(cat << 'EOF'
+          PR_BODY=$(cat << 'EOFPR'
           ## 📋 User Story
 
           **Azure DevOps Work Item:** [${{ steps.extract.outputs.work_item_id }}](${{ steps.extract.outputs.url }})
 
           ### Description
-          ${{ steps.extract.outputs.description }}
+          $DESCRIPTION
 
           ### Acceptance Criteria
-          ${{ steps.extract.outputs.acceptance_criteria }}
+          $CRITERIA
 
           ---
 
@@ -145,7 +157,7 @@ jobs:
 
           ---
           *This PR was automatically created from Azure DevOps User Story #${{ steps.extract.outputs.work_item_id }}*
-          EOF
+          EOFPR
           )
 
           # Create the pull request
