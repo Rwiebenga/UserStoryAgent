@@ -1,11 +1,7 @@
 import { useState, useEffect } from "react";
-import Colorscheme from './components/Colorscheme';
 import Navbar from "./components/Navbar";
-import Colorscheme from './components/Colorscheme';
 import EmbassyInfo from "./components/EmbassyInfo";
-import Colorscheme from './components/Colorscheme';
 import "./App.css";
-import Colorscheme from './components/Colorscheme';
 
 function App() {
   const [embassies, setEmbassies] = useState([]);
@@ -103,6 +99,3 @@ function App() {
 }
 
 export default App;
-
-// TODO: Integrate Colorscheme component based on user story US-374433
-// Example: <Colorscheme />
