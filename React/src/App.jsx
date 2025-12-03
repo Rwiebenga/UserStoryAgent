@@ -1,10 +1,18 @@
 import { useState, useEffect } from "react";
 import Search from './components/Search';
+import Search from './components/Search';
+import Search from './components/Search';
 import Navbar from "./components/Navbar";
+import Search from './components/Search';
+import Search from './components/Search';
 import Search from './components/Search';
 import EmbassyInfo from "./components/EmbassyInfo";
 import Search from './components/Search';
+import Search from './components/Search';
+import Search from './components/Search';
 import "./App.css";
+import Search from './components/Search';
+import Search from './components/Search';
 import Search from './components/Search';
 
 function App() {
@@ -103,6 +111,9 @@ function App() {
 }
 
 export default App;
+
+// TODO: Integrate Search component based on user story US-374402
+// Example: <Search />
 
 // TODO: Integrate Search component based on user story US-374402
 // Example: <Search />
