@@ -206,14 +206,24 @@ jobs:
           )
 
           # Create the pull request
-          echo "Creating new PR"
-          gh pr create \
+          echo "Creating new PR for branch: ${{ steps.branch.outputs.branch_name }}"
+          
+          # Force create the PR (ignore if it somehow already exists)
+          if ! gh pr create \
             --title "${{ steps.extract.outputs.pr_title }}" \
             --body "$PR_BODY" \
             --base main \
             --head ${{ steps.branch.outputs.branch_name }} \
             --label "user-story,azure-devops" \
-            --assignee "${{ steps.extract.outputs.assigned_to }}"
+            --assignee "${{ steps.extract.outputs.assigned_to }}"; then
+            echo "Warning: PR creation failed, checking if PR already exists..."
+            if gh pr view ${{ steps.branch.outputs.branch_name }} &>/dev/null; then
+              echo "PR already exists for this branch, continuing..."
+            else
+              echo "Error: Failed to create PR and no existing PR found"
+              exit 1
+            fi
+          fi
 
       - name: Comment on Pull Request
         env:
