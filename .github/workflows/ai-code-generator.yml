@@ -96,18 +96,13 @@ jobs:
         id: analyze
         run: |
           # Detect project structure
-          if [ -d "React/src" ]; then
+          if [ -d "src/components" ]; then
             echo "has_react=true" >> $GITHUB_OUTPUT
-            echo "react_components=$(find React/src/components -name '*.jsx' -o -name '*.tsx' 2>/dev/null | wc -l)" >> $GITHUB_OUTPUT
-          fi
-
-          if [ -d "FindMyEmbassy" ]; then
-            echo "has_dotnet=true" >> $GITHUB_OUTPUT
-            echo "controllers=$(find FindMyEmbassy/Controllers -name '*Controller.cs' 2>/dev/null | wc -l)" >> $GITHUB_OUTPUT
+            echo "react_components=$(find src/components -name '*.jsx' -o -name '*.tsx' 2>/dev/null | wc -l)" >> $GITHUB_OUTPUT
           fi
 
           # Get data models
-          if [ -f "React/public/Data/embassies.json" ]; then
+          if [ -f "public/Data/embassies.json" ]; then
             echo "has_data=true" >> $GITHUB_OUTPUT
           fi
 
@@ -119,10 +114,10 @@ jobs:
           COMPONENT_NAME="${FEATURE_NAME^}"  # Capitalize first letter
 
           # Create component directory
-          mkdir -p "React/src/components/$COMPONENT_NAME"
+          mkdir -p "src/components/$COMPONENT_NAME"
 
           # Generate React component based on user story
-          cat > "React/src/components/$COMPONENT_NAME/${COMPONENT_NAME}.jsx" << EOF
+          cat > "src/components/$COMPONENT_NAME/${COMPONENT_NAME}.jsx" << EOF
           import React, { useState, useEffect } from 'react';
           import './${COMPONENT_NAME}.css';
 
@@ -185,7 +180,7 @@ jobs:
           EOF
 
           # Generate CSS file
-          cat > "React/src/components/$COMPONENT_NAME/${COMPONENT_NAME}.css" << EOF
+          cat > "src/components/$COMPONENT_NAME/${COMPONENT_NAME}.css" << EOF
           /* $COMPONENT_NAME Styles */
 
           .${COMPONENT_NAME,,} {
@@ -213,126 +208,11 @@ jobs:
           EOF
 
           # Generate index file
-          cat > "React/src/components/$COMPONENT_NAME/index.js" << EOF
+          cat > "src/components/$COMPONENT_NAME/index.js" << EOF
           export { default } from './${COMPONENT_NAME}';
           EOF
 
           echo "Generated React component: $COMPONENT_NAME"
-
-      - name: Generate .NET Controller (if applicable)
-        if: steps.analyze.outputs.has_dotnet == 'true'
-        run: |
-          # Extract feature name
-          FEATURE_NAME=$(echo "${{ steps.user_story.outputs.title }}" | sed 's/.*want to //' | sed 's/ .*//' | sed 's/[^a-zA-Z]//g')
-          CONTROLLER_NAME="${FEATURE_NAME^}Controller"
-
-          # Generate controller
-          cat > "FindMyEmbassy/Controllers/${CONTROLLER_NAME}.cs" << 'EOF'
-          using System;
-          using System.Collections.Generic;
-          using System.Linq;
-          using System.Threading.Tasks;
-          using Microsoft.AspNetCore.Mvc;
-          using FindMyEmbassy.Models;
-
-          namespace FindMyEmbassy.Controllers
-          {
-              /// <summary>
-              /// Controller for: ${{ steps.user_story.outputs.title }}
-              /// 
-              /// User Story ID: US-${{ steps.user_story.outputs.us_id }}
-              /// 
-              /// Description: ${{ steps.user_story.outputs.description }}
-              /// 
-              /// Acceptance Criteria:
-              /// ${{ steps.user_story.outputs.criteria }}
-              /// </summary>
-              [ApiController]
-              [Route("api/[controller]")]
-              public class CONTROLLER_NAME_PLACEHOLDER : ControllerBase
-              {
-                  // TODO: Add dependency injection for services if needed
-                  
-                  /// <summary>
-                  /// GET endpoint - Implement based on acceptance criteria
-                  /// </summary>
-                  [HttpGet]
-                  public async Task<IActionResult> Get()
-                  {
-                      try
-                      {
-                          // TODO: Implement logic based on user story requirements
-                          
-                          return Ok(new { message = "Implementation pending" });
-                      }
-                      catch (Exception ex)
-                      {
-                          return StatusCode(500, new { error = ex.Message });
-                      }
-                  }
-                  
-                  /// <summary>
-                  /// POST endpoint - Add if needed based on acceptance criteria
-                  /// </summary>
-                  [HttpPost]
-                  public async Task<IActionResult> Post([FromBody] object data)
-                  {
-                      try
-                      {
-                          // TODO: Implement based on requirements
-                          
-                          return Ok(new { message = "Created successfully" });
-                      }
-                      catch (Exception ex)
-                      {
-                          return BadRequest(new { error = ex.Message });
-                      }
-                  }
-                  
-                  // TODO: Add additional endpoints as needed
-              }
-          }
-          EOF
-
-          # Replace placeholder with actual controller name
-          sed -i "s/CONTROLLER_NAME_PLACEHOLDER/$CONTROLLER_NAME/g" "FindMyEmbassy/Controllers/${CONTROLLER_NAME}.cs"
-
-          echo "Generated .NET controller: $CONTROLLER_NAME"
-
-      - name: Generate Model/DTO (if needed)
-        if: steps.analyze.outputs.has_dotnet == 'true'
-        run: |
-          FEATURE_NAME=$(echo "${{ steps.user_story.outputs.title }}" | sed 's/.*want to //' | sed 's/ .*//' | sed 's/[^a-zA-Z]//g')
-          MODEL_NAME="${FEATURE_NAME^}Model"
-
-          cat > "FindMyEmbassy/Models/${MODEL_NAME}.cs" << 'EOF'
-          using System;
-          using System.ComponentModel.DataAnnotations;
-
-          namespace FindMyEmbassy.Models
-          {
-              /// <summary>
-              /// Model for: ${{ steps.user_story.outputs.title }}
-              /// User Story: US-${{ steps.user_story.outputs.us_id }}
-              /// </summary>
-              public class MODEL_NAME_PLACEHOLDER
-              {
-                  public int Id { get; set; }
-                  
-                  // TODO: Add properties based on acceptance criteria
-                  // Example:
-                  // [Required]
-                  // public string Name { get; set; }
-                  
-                  public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-                  public DateTime? UpdatedAt { get; set; }
-              }
-          }
-          EOF
-
-          sed -i "s/MODEL_NAME_PLACEHOLDER/$MODEL_NAME/g" "FindMyEmbassy/Models/${MODEL_NAME}.cs"
-
-          echo "Generated .NET model: $MODEL_NAME"
 
       - name: Update App.jsx (integrate new component)
         if: steps.analyze.outputs.has_react == 'true'
@@ -341,17 +221,17 @@ jobs:
           COMPONENT_NAME="${FEATURE_NAME^}"
 
           # Add import and TODO comment to App.jsx if it exists
-          if [ -f "React/src/App.jsx" ]; then
+          if [ -f "src/App.jsx" ]; then
             # Create a backup
-            cp React/src/App.jsx React/src/App.jsx.bak
+            cp src/App.jsx src/App.jsx.bak
             
             # Add import at the top (after other imports)
-            sed -i "/^import/a import $COMPONENT_NAME from './components/$COMPONENT_NAME';" React/src/App.jsx
+            sed -i "/^import/a import $COMPONENT_NAME from './components/$COMPONENT_NAME';" src/App.jsx
             
             # Add TODO comment
-            echo "" >> React/src/App.jsx
-            echo "// TODO: Integrate $COMPONENT_NAME component based on user story US-${{ steps.user_story.outputs.us_id }}" >> React/src/App.jsx
-            echo "// Example: <$COMPONENT_NAME />" >> React/src/App.jsx
+            echo "" >> src/App.jsx
+            echo "// TODO: Integrate $COMPONENT_NAME component based on user story US-${{ steps.user_story.outputs.us_id }}" >> src/App.jsx
+            echo "// Example: <$COMPONENT_NAME />" >> src/App.jsx
           fi
 
       - name: Commit Generated Code
@@ -365,7 +245,6 @@ jobs:
             git commit -m "feat(US-${{ steps.user_story.outputs.us_id }}): AI-generated code scaffolding
 
             - Generated React component with basic structure
-            - Created .NET controller and model
             - All code includes TODOs based on acceptance criteria
             
             User Story: ${{ steps.user_story.outputs.title }}
@@ -388,8 +267,8 @@ jobs:
 
             ### ✅ Generated Files:
             - React component with basic structure
-            - .NET controller and model
             - CSS styles
+            - Component index file
 
             ### 📝 Next Steps:
             1. Pull the latest changes from this branch
