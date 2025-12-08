@@ -1,11 +1,7 @@
 import { useState, useEffect } from "react";
-import Add from './components/Add';
 import Navbar from "./components/Navbar";
-import Add from './components/Add';
 import EmbassyInfo from "./components/EmbassyInfo";
-import Add from './components/Add';
 import "./App.css";
-import Add from './components/Add';
 
 function App() {
   const [embassies, setEmbassies] = useState([]);
@@ -103,6 +99,3 @@ function App() {
 }
 
 export default App;
-
-// TODO: Integrate Add component based on user story US-375073
-// Example: <Add />
