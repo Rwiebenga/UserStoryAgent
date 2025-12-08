@@ -1,11 +1,7 @@
 import { useState, useEffect } from "react";
-import Color from './components/Color';
 import Navbar from "./components/Navbar";
-import Color from './components/Color';
 import EmbassyInfo from "./components/EmbassyInfo";
-import Color from './components/Color';
 import "./App.css";
-import Color from './components/Color';
 
 function App() {
   const [embassies, setEmbassies] = useState([]);
@@ -103,6 +99,3 @@ function App() {
 }
 
 export default App;
-
-// TODO: Integrate Color component based on user story US-375072
-// Example: <Color />
